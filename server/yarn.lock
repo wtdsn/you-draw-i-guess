@@ -785,6 +785,11 @@ unpipe@1.0.0:
   resolved "https://registry.yarnpkg.com/unpipe/-/unpipe-1.0.0.tgz#b2bf4ee8514aae6165b4817829d21b2ef49904ec"
   integrity sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==
 
+utils-h@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/utils-h/-/utils-h-1.1.2.tgz#29d23eda08a49976a8d31a971811de1ce359a26f"
+  integrity sha512-CF6BPbA7BEIihJi/JLzwod3PZxYfovvn8DJaaxI+4T6ra2SBT7dSjdcvpCYMeBVhLJnB9DaZPYcOj/bkYUwpUw==
+
 uuid@^8.3.2:
   version "8.3.2"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
