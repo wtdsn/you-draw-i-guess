@@ -1,0 +1,7 @@
+.vscode
+ui
+app/.vscode
+app/node_modules
+server/.vscode
+server/node_modules
+server/dist
