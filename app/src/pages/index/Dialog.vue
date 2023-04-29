@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // todo 邀请用户
 import { ref } from 'vue'
+import { statusE } from '@/../../../share/room'
 
 // 需要用户 id , 绘画的 id , 房主 id
 const ownerId = ref(2)
@@ -8,17 +9,6 @@ const drawerId = ref(3)
 const meId = ref(1)
 const drawerName = ref('Jack')
 
-enum statusE {
-  // 未开始
-  waitingJoin,
-  waitingStart,
-
-  // 开始
-  newRound,  // 新回合
-  skipRound, // 跳过回合
-  choosing, // 选择中
-  drawing,  // 绘画中
-}
 const status = ref<statusE>(2)
 
 </script>
