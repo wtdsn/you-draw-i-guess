@@ -1,5 +1,6 @@
 import Router from '@koa/router'
 import create from '@src/controller/entry/create'
+import { joinByNumber } from '@src/controller/entry/join'
 
 const router = new Router({
   prefix: '/entry'
@@ -7,8 +8,6 @@ const router = new Router({
 
 router.post('/create', create)
 
-router.post('/join', (ctx, next) => {
-  ctx.body = 'join'
-})
+router.post('/joinByNumber', joinByNumber)
 
 export default router
