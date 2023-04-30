@@ -1,17 +1,12 @@
 import { findRoom } from '@src/db/game'
-
+import { chatInInter } from './Room';
 // 声明
 import { Connect } from "@src/utils/socket-h";
 
-export interface bodyInter {
-  name: string,
-  roomNumber: string
-}
-
-export default function join(body: bodyInter, connect: Connect
+export default function chat(body: chatInInter, connect: Connect
 ) {
-  const { name, roomNumber } = body
-  if (!name || !roomNumber) {
+  const { name, msg, uid } = body
+  if (!name || !msg || !uid) {
     connect.send({
       code: 0,
       msg: "参数错误"
@@ -19,34 +14,15 @@ export default function join(body: bodyInter, connect: Connect
     return
   }
 
-  const room = findRoom(roomNumber)
+  const room = findRoom(connect.store.roomNumber)
+
   if (!room) {
     connect.send({
       code: 0,
       msg: "该房间不存在"
     })
     connect.close(0, '房间不存在')
-  } else if (room.status >= 2) {
-    connect.send({
-      code: 0,
-      msg: "房间游戏中，不可加入"
-    })
-    connect.close(0, '房间游戏中，不可加入')
   } else {
-    let isUniName = room.palyers.every(v => {
-      if (v.name === name) return false
-      return true
-    })
-
-    if (!isUniName) {
-      connect.send({
-        code: 0,
-        msg: `该房间已有昵称为：${name} 的用户，请修改您的昵称`
-      })
-      connect.close(0, '昵称重复')
-    } else {
-      // 加入
-     
-    }
+    room.chat(body)
   }
 }

@@ -47,6 +47,11 @@ export default function join(body: bodyInter, connect: Connect
       connect.close(0, '昵称重复')
     } else {
       // 加入
+
+      connect.store = {
+        roomNumber
+      }
+
       room.joinRoom({
         uid: createUni('u'),
         name,

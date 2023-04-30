@@ -16,7 +16,8 @@ interface Connect {
   close: (code: number, reason: string) => void
   sendPing: (data: string) => void
   send: (data: string | Object, cb?: Function) => void
-  on: onInter
+  on: onInter,
+  store: any
 }
 
 

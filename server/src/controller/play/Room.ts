@@ -15,7 +15,8 @@ export interface palyerInter {
 }
 
 class Round {
-  constructor(public drawerId: string, public keyword: string) {
+  public rightPalyer: Set<string> = new Set()
+  constructor(public drawerId: string, public keyword: string, public noRightNum: number) {
   }
 }
 
@@ -124,40 +125,104 @@ export class Room {
   // 聊天
   chat(data: chatInInter) {
     // 绘画中
-    if (this.status === statusE.drawing) {
+    let msg = data.msg.trim()
 
-    } else {
-      this.chatList
+    // 答对了
+    if (this.status === statusE.drawing && msg === this.round?.keyword) {
+      // 如果之前就答对
+      if (this.round.rightPalyer.has(data.uid)) {
+        this.chatList.push({
+          type: "chat",
+          ...data,
+          msg: "*".repeat(this.round.keyword.length)
+        })
+      } else {
+        this.chatList.push({
+          type: "right",
+          ...data,
+          msg
+        })
+        this.round.noRightNum--
+        this.round.rightPalyer.add(data.uid)
+
+        // 特殊处理
+        flushChatList(this.palyers, this.chatList, data.uid)
+
+
+        // todo 全部答对
+        if (!this.round.noRightNum) {
+          // 全部答对
+          console.log("全部答对");
+
+        }
+        return
+      }
+    }
+    else {
+      // 没有答对或者非答题
+      this.chatList.push({
+        type: "chat",
+        ...data
+      })
     }
 
-    // this.chatList.push(chatData)
     noticeChat(this.palyers, this.chatList)
   }
 }
 
-interface chatInInter {
+export interface chatInInter {
   name: string,
-  msg: string
+  msg: string,
+  uid: string
 }
 
 interface chatOutInter {
   type: "chat" | "right"  // chat 即聊天或者错误答案 ， right  即正确答案
   name: string,
-  msg: string
+  msg: string,
+  uid: string
 }
 
-let noticeChat = throttle(300, function (palyers: palyerInter[], chatList: chatOutInter[]) {
-  let data = JSON.stringify({
-    type: 'chat',
-    msg: "聊天更新",
-    data: chatList
-  })
-  chatList.splice(0)
+let noticeChat = throttle(300, flushChatList, true)
 
-  palyers.forEach(v => {
-    v.connect.send(data)
-  })
-}, true)
+function flushChatList(palyers: palyerInter[], chatList: chatOutInter[], righterId?: string) {
+  let list = chatList.splice(0)
+
+  if (righterId) {
+    // 答对玩家
+    let lastChat = chatList[chatList.length - 1]
+    lastChat.msg = `答案:'${lastChat.msg}'正确！你是第一位答对的！+6`
+    let toWiner = JSON.stringify({
+      type: 'chat',
+      msg: "聊天更新",
+      data: list
+    })
+    lastChat.msg = `玩家${lastChat.name}回答正确!是第一位答对的玩家`
+    let toOther = JSON.stringify({
+      type: 'chat',
+      msg: "聊天更新",
+      data: list
+    })
+
+    palyers.forEach(v => {
+      if (v.uid === righterId) {
+        v.connect.send(toWiner)
+      } else
+        v.connect.send(toOther)
+    })
+  } else {
+    // 正常
+    let data = JSON.stringify({
+      type: 'chat',
+      msg: "聊天更新",
+      data: list
+    })
+
+    palyers.forEach(v => {
+      v.connect.send(data)
+    })
+  }
+}
 
 export const createRoomNumber: () => string = () => {
   let number = ''
