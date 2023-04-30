@@ -39,6 +39,13 @@ class Connect extends EventEmitter {
     let { path, headers } = parseShake(buffer.toString())
     this.path = path
 
+    // 没有对应的监听器
+    if (this.listeners(path).length < 1) {
+      this.socket.end()
+      this.emit('close')
+      return
+    }
+
     let inkey = headers['Sec-WebSocket-Key'].trim()
     let sha1 = createHash('sha1')
     sha1.end(inkey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')

@@ -1,15 +1,14 @@
-import createUni from '@src/utils/uni'
-import { createRoom, findRoom, createRoomNumber } from '@src/db/game'
+import { createRoom, findRoom } from '@src/db/game'
+import { createRoomNumber } from '../play/Room'
 
 function create(ctx: any) {
   const { name } = ctx.request.body
   if (!name) {
-    ctx.throw(400, "参数错误")
+    ctx.throw(400, "昵称不能为空")
     return
   }
 
   // 创建房间
-  const ownerId = createUni('u')
   let roomNumber = createRoomNumber()
   let maxRetry = 3
   while (maxRetry && findRoom(roomNumber)) {
@@ -24,7 +23,7 @@ function create(ctx: any) {
     return
   }
 
-  createRoom(roomNumber, ownerId, name)
+  createRoom(roomNumber)
 
   ctx.body = {
     code: 1,

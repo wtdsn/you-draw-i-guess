@@ -1,6 +1,4 @@
-import createUni from '@src/utils/uni'
 import { findRoom } from '@src/db/game'
-import { statusE } from '../../../../share/game'
 
 export function joinByNumber(ctx: any) {
   const { name, roomNumber } = ctx.request.body

@@ -1,26 +1,14 @@
-
-
-import { chat } from "@src/controller/play/chat";
 import { createServer } from "@src/utils/socket-h";
 import { Server } from "@src/utils/socket-h";
 
+import { game } from "@src/controller/play";
 const createWsServer: () => Server = function () {
   const server = createServer((connect) => {
     connect.on('connect', (socket) => {
       console.log("connect success!");
     })
 
-    connect.on('/chat', chat)
-
-    /*   server.on('/draw', (res) => {
-        console.log("/draw", res);
-        server.send(res + '!!!', () => { })
-      }) */
-
-    /*   server.on('/players', (res) => {
-        console.log("/players", res);
-        server.send(res + '!!!', () => { })
-      }) */
+    connect.on('/game', game)
 
     connect.on('error', (err) => {
       console.log("ws err", err)
@@ -30,7 +18,6 @@ const createWsServer: () => Server = function () {
       })
     })
   })
-
 
   return server
 }
