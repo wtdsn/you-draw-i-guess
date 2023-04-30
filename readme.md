@@ -56,3 +56,31 @@ https://github.com/dividab/tsconfig-paths
     "ts": "ts-node -r tsconfig-paths/register"
   }
 ```
+
+
+# 使用 js 文件
+项目中，使用了一些 js 的文件，ts 如果引用 js 的话，是会报错的，需要给它编写声明文件。
+并且， js 文件如果使用模块，使用 commonjs 模块就行了。因为 ts-node 帮我们处理 ts.
+js 还是 node 本身去加载，那么就使用 commonjs 进行模块划分。
+
+# 扩展第三方模块的声明
+要扩展第三方库的类型，您可以使用 TypeScript 的声明合并功能来添加或更改现有的类型定义。
+
+假设您要扩展的是名为axios的第三方库，您可以创建一个与其相同名称的新文件 axios.d.ts，并在其中声明以下内容：
+```typescript
+import { AxiosRequestConfig } from 'axios'; // 导入现有的类型定义
+
+declare module 'axios' {
+  // 扩展AxiosRequestConfig接口
+  interface AxiosRequestConfig {
+    timeout: number;
+  }
+}
+```
+现在，当您在代码中使用axios时，它应该包含您扩展的新属性timeout。
+
+我扩展的是自己的模块。因此模块名就写引入的路径名。 ts 能识别就行
+
+ts 和 vscode 识别成功了。不过 ts-nde 好像报错了！
+
+不知道怎么办了，只好直接修改原本的声明文件了！

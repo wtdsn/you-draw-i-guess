@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // todo 邀请用户
 import { ref } from 'vue'
-import { statusE } from '@/../../../share/room'
+import { statusE } from '@/../../../share/game'
 
 // 需要用户 id , 绘画的 id , 房主 id
 const ownerId = ref(2)
