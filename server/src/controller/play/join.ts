@@ -13,11 +13,7 @@ export default function join(body: bodyInter, connect: Connect
 ) {
   const { name, roomNumber } = body
   if (!name || !roomNumber) {
-    connect.send({
-      code: 0,
-      msg: "参数错误"
-    })
-    return
+    throw Error('参数错误')
   }
 
   const room = findRoom(roomNumber)
@@ -48,12 +44,14 @@ export default function join(body: bodyInter, connect: Connect
     } else {
       // 加入
 
+      let uid = createUni('u')
       connect.store = {
-        roomNumber
+        roomNumber,
+        uid
       }
 
       room.joinRoom({
-        uid: createUni('u'),
+        uid: uid,
         name,
         score: 0,
         connect

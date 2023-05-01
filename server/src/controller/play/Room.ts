@@ -7,6 +7,11 @@ const words2 = ['西瓜', '香蕉', '木鱼', '太阳']
 const words3 = ['滑雪场', '含羞草', '拖拉机', '肯德基']
 const words4 = ['蜜雪冰城', '后羿射日', '女娲补天', '嫦娥奔月']
 
+const showNewRounTime = 3000
+const chooseTime = 12000
+const drawTime = 90 * 1000
+const roundEndTime = 3000
+
 export interface palyerInter {
   uid: string,
   name: string,
@@ -14,9 +19,33 @@ export interface palyerInter {
   connect: Connect
 }
 
+export interface chatInInter {
+  name: string,
+  msg: string,
+  uid: string
+}
+
+interface chatOutInter {
+  type: "chat" | "right"  // chat 即聊天或者错误答案 ， right  即正确答案
+  name: string,
+  msg: string,
+  uid: string
+}
+
+
+// public keyword: string
 class Round {
   public rightPalyer: Set<string> = new Set()
-  constructor(public drawerId: string, public keyword: string, public noRightNum: number) {
+  public keyword: string = ''
+  constructor(public drawerId: string, public noRightNum: number) {
+  }
+
+  choose() {
+    let wordList = []
+    wordList.push(words1[Math.round(Math.random() * words1.length)])
+    wordList.push(words2[Math.round(Math.random() * words2.length)])
+    wordList.push(words3[Math.round(Math.random() * words3.length)])
+    wordList.push(words4[Math.round(Math.random() * words4.length)])
   }
 }
 
@@ -86,11 +115,30 @@ export class Room {
   // 状态改变
   noticeStatusChange(newStatus: statusE) {
     this.status = newStatus
-    let data = JSON.stringify({
-      type: 'status',
-      msg: "房间状态变化",
-      data: this.status
-    })
+    let data: string
+    if (newStatus > 1) {
+      // 开始后
+      data = JSON.stringify({
+        type: 'status',
+        msg: "房间状态变化",
+        data: {
+          status: newStatus,
+          roomOwnerId: this.roomOwnerId,
+          roomOwnerName: this.roomOwnerName,
+          drawerId: this.palyers[this.drawerIndex].uid
+        }
+      })
+    } else {
+      // 还没开始
+      data = JSON.stringify({
+        type: 'status',
+        msg: "房间状态变化",
+        data: {
+          status: newStatus
+        }
+      })
+    }
+
 
     this.palyers.forEach(v => {
       v.connect.send(data)
@@ -99,27 +147,37 @@ export class Room {
 
   // 点击开始游戏
   startGame() {
-    this.status = statusE.firstStart
-  }
-
-  // 选择中
-  chooseList() {
-    let wordList = []
-    wordList.push(words1[Math.round(Math.random() * words1.length)])
-    wordList.push(words2[Math.round(Math.random() * words2.length)])
-    wordList.push(words3[Math.round(Math.random() * words3.length)])
-    wordList.push(words4[Math.round(Math.random() * words4.length)])
-    this.status = statusE.choosing
+    if (this.status === statusE.waitingStart) {
+      this.newRound()
+      return true
+    }
+    else {
+      return false
+    }
   }
 
   // 选择
-  newTurn() {
-    this.status === statusE.newRound
+  newRound() {
+    this.noticeStatusChange(statusE.newRound)
+    // 3000 显示新回合开始
     setTimeout(() => {
-      this.status === statusE.choosing
-      this.chooseList()
-      // this.round = new Round(this.drawerIndex)
-    }, 3)
+      this.noticeStatusChange(statusE.choosing)
+      this.round = new Round(this.palyers[this.drawerIndex].uid, this.palyers.length)
+    }, showNewRounTime)
+  }
+
+  endRound() {
+    this.noticeStatusChange(statusE.roundEnd)
+    this.drawerIndex++
+    if (this.drawerIndex === this.palyers.length) {
+      // 结束游戏
+      setTimeout(() => {
+
+      },)
+    }
+    setTimeout(() => {
+
+    })
   }
 
   // 聊天
@@ -170,18 +228,6 @@ export class Room {
   }
 }
 
-export interface chatInInter {
-  name: string,
-  msg: string,
-  uid: string
-}
-
-interface chatOutInter {
-  type: "chat" | "right"  // chat 即聊天或者错误答案 ， right  即正确答案
-  name: string,
-  msg: string,
-  uid: string
-}
 
 let noticeChat = throttle(300, flushChatList, true)
 

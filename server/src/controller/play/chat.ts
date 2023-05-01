@@ -17,11 +17,7 @@ export default function chat(body: chatInInter, connect: Connect
   const room = findRoom(connect.store.roomNumber)
 
   if (!room) {
-    connect.send({
-      code: 0,
-      msg: "该房间不存在"
-    })
-    connect.close(0, '房间不存在')
+    throw Error('房间不存在')
   } else {
     room.chat(body)
   }
