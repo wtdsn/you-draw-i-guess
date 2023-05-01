@@ -3,6 +3,7 @@
 
 import join from './join'
 import chat from './chat'
+import draw from './draw'
 import startGame from './startGame'
 
 // 声明
@@ -21,7 +22,7 @@ export function game(msg: string, connect: Connect) {
       case 'chat':
         return chat(body.data, connect)
       case 'draw':
-        return join(body.data, connect)
+        return draw(body.data, connect)
       case 'join':
         return join(body.data, connect)
       case 'start':

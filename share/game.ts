@@ -6,7 +6,7 @@ export enum statusE {
 
   // 开始
   newRound,  // 新回合
-  roundEnd, // 当前回合结束 （全部答对，部分答对，回合跳过）
+  roundEnd, // 当前回合结束 （全部答对，部分答对,没有人答对，计算分数）
   choosing, // 选择中
   drawing,  // 绘画中
 
