@@ -2,7 +2,10 @@
 import { ref, nextTick } from 'vue'
 import PenPath from './PenPath.vue';
 
-const name = ref('')
+// api
+import { createRoom } from '@/api/entry';
+
+const name = ref('123')
 
 const beforeJoin = ref(false)
 function toJoin() {
@@ -26,6 +29,16 @@ function limitNumber() {
 }
 
 
+// 创建房间
+async function create() {
+  if (!name.value || !name.value.trim()) {
+    alert("请输入昵称")
+    return
+  }
+  const res = await createRoom(name.value)
+  console.log("res", res);
+}
+
 // todo 邀请用户
 </script>
 
@@ -48,7 +61,7 @@ function limitNumber() {
           <input type="text" name="" id="name" v-model="name">
         </div>
         <div class="ops">
-          <div class="btn create">创建房间</div>
+          <div class="btn create" @click="create">创建房间</div>
           <div class="btn join" @click="toJoin">加入房间</div>
           <div class="btn join_random">随机加入</div>
         </div>

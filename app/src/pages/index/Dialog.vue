@@ -14,6 +14,7 @@ const status = ref<statusE>(2)
 </script>
 <template>
   <div :class="'dialog_con ' + (status === statusE.drawing && drawerId === meId ? 'show_keyword' : '')">
+    <!-- 未开始 -->
     <div class="un_start" v-if="status < 2">
       <!-- 等待玩家加入 -->
       <div class="text" v-if="status === statusE.waitingJoin">等待玩家加入</div>
@@ -26,7 +27,10 @@ const status = ref<statusE>(2)
       <!-- 玩家等待房主开始 -->
       <div class="text" v-else>等待房主开始游戏</div>
     </div>
-
+    <!-- 结束 -->
+    <div class="end" v-if="status === statusE.end">
+      游戏结束！
+    </div>
     <!-- 我绘画时 显示给我看的 -->
     <div class="drawing" v-else-if="drawerId === meId">
       <!-- 你的回合 -->
@@ -40,9 +44,9 @@ const status = ref<statusE>(2)
       <div class="choose_text" v-else-if="status === statusE.drawing">
         走马观花
       </div>
-      <!-- 您跳过此回合！进入下一个回合中 -->
-      <div class="text" v-else>
-        您跳过此回合！将进入下一个回合
+      <!-- 、回合结束 -->
+      <div class="text" v-else-if="status === statusE.roundEnd">
+        此回合结束！共3人答对！
       </div>
     </div>
 
@@ -55,8 +59,8 @@ const status = ref<statusE>(2)
         选择词语中
       </div>
       <!-- 该玩家跳过此回合，进入下一个回合中 -->
-      <div class="text" v-else-if="status === statusE.skipRound">
-        玩家{{ drawerName }}跳过此回合！将进入下一个回合
+      <div class="text" v-else-if="status === statusE.roundEnd">
+        此回合结束！共3人答对！
       </div>
     </div>
 
