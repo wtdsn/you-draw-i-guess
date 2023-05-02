@@ -1,26 +1,29 @@
 <script setup lang="ts">
 // todo 邀请用户
-import { ref } from 'vue'
-import { statusE } from '@/../../../share/game'
+import { toRefs } from 'vue'
+import { statusE } from '../../../../share/game.ts'
 
-// 需要用户 id , 绘画的 id , 房主 id
-const ownerId = ref(2)
-const drawerId = ref(3)
-const meId = ref(1)
-const drawerName = ref('Jack')
-
-const status = ref<statusE>(2)
+// 用户 id , 绘画的 id , 房主 id , 房间状态
+interface propsIn {
+  status: statusE
+  ownerId: string
+  drawerId: string
+  drawerName: string
+  myId: string
+}
+const props = defineProps<propsIn>()
+const { status, myId, drawerId, ownerId, drawerName } = toRefs(props)
 
 </script>
 <template>
-  <div :class="'dialog_con ' + (status === statusE.drawing && drawerId === meId ? 'show_keyword' : '')">
+  <div :class="'dialog_con ' + (status === statusE.drawing && drawerId === myId ? 'show_keyword' : '')">
     <!-- 未开始 -->
     <div class="un_start" v-if="status < 2">
       <!-- 等待玩家加入 -->
       <div class="text" v-if="status === statusE.waitingJoin">等待玩家加入</div>
 
       <!-- 房主确认开始 -->
-      <div class="comfirm_start" v-else-if="meId === ownerId">
+      <div class="comfirm_start" v-else-if="myId === ownerId">
         <button>开始游戏</button>
       </div>
 
@@ -28,11 +31,11 @@ const status = ref<statusE>(2)
       <div class="text" v-else>等待房主开始游戏</div>
     </div>
     <!-- 结束 -->
-    <div class="end" v-if="status === statusE.end">
+    <div class="end" v-else-if="status === statusE.end">
       游戏结束！
     </div>
     <!-- 我绘画时 显示给我看的 -->
-    <div class="drawing" v-else-if="drawerId === meId">
+    <div class="drawing" v-else-if="drawerId === myId">
       <!-- 你的回合 -->
       <div class="text" v-if="status === statusE.newRound">新回合开始！到你作画了！</div>
 

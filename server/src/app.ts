@@ -2,7 +2,7 @@ import Koa from 'koa';
 // import session from 'koa-session'
 import router from './route/index'
 import koaBody from 'koa-body';
-
+import cors from 'koa2-cors'
 // ws
 import createWsServer from './ws';
 
@@ -28,6 +28,7 @@ app.on('error', (err, ctx) => {
 });
 
 app.use(koaBody())
+app.use(cors());
 app
   .use(router.routes())
   .use(router.allowedMethods());

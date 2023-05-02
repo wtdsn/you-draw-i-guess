@@ -3,8 +3,11 @@ import { createRoomNumber } from '../play/Room'
 
 function create(ctx: any) {
   const { name } = ctx.request.body
+
   if (!name) {
-    ctx.throw(400, "昵称不能为空")
+    // ctx.throw(400, "昵称不能为空")
+    ctx.status = 400
+    ctx.body = "昵称不能为空"
     return
   }
 

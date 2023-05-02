@@ -28,9 +28,16 @@ interface beforeRequestIn {
   (config: configIn): configIn
 }
 
-type afterResponse = [(reponse: Response) => any, (err: any) => any]
+interface responseIn {
+  status: number,
+  statusText: string,
+  data: any
+}
 
 
+type afterResponse = [(reponse: responseIn) => any, (err: responseIn) => any]
+
+// fetch 类
 export class FetchH {
   public beforeRequest?: beforeRequestIn
   public afterResponse?: afterResponse
@@ -41,25 +48,49 @@ export class FetchH {
   request(config: configIn) {
     config = mergeCongig(config, this.config)
 
-
     if (this.beforeRequest) {
       config = this.beforeRequest(config)
     }
 
     let { url, init } = getFetchParams(config)
 
-    return fetch(url, init).then(v => {
-      return v.json()
-    })
+    return fetch(url, init)
+      // 处理数据
       .then(v => {
-        // v.ok?
-        console.log(v)
+        let {
+          statusText,
+          status
+        } = v
+        if (statusText === 'OK') {
+          return v.json().then(v => {
+            return {
+              statusText: "OK",
+              status,
+              data: v
+            }
+          })
+        } else {
+          return v.text().then(v => {
+            return {
+              statusText,
+              status,
+              data: v
+            }
+          })
+        }
+      })
+      // 响应拦截
+      .then(v => {
+        if (v.statusText === 'OK') {
+          if (this.afterResponse && this.afterResponse[0]) {
+            return this.afterResponse[0](v)
+          }
+        } else {
+          if (this.afterResponse && this.afterResponse[1]) {
+            return this.afterResponse[1](v)
+          }
+        }
         return v
-        /*  if (this.afterResponse && this.afterResponse[0]) {
-           return this.afterResponse[1](err)
-         } else {
-           throw err
-         } */
       })
   }
 }
@@ -69,6 +100,7 @@ interface fetchParamsIn {
   init: RequestInit
 }
 
+// 合并配置
 function mergeCongig(config1: configIn, config2: configIn): configIn {
   // 1. headers 合并，其他的 config1 覆盖 config2
   let newConfig: configIn = {
@@ -83,6 +115,7 @@ function mergeCongig(config1: configIn, config2: configIn): configIn {
   return newConfig
 }
 
+// 将配置处理成 fetch 的参数
 function getFetchParams(config: configIn): fetchParamsIn {
   let url: string = (config?.baseUrl || '') + config.url
 
@@ -112,11 +145,13 @@ function getFetchParams(config: configIn): fetchParamsIn {
   }
 }
 
-export interface requestIn {
-  (config: configIn): Promise<any>
+export interface requestIn<T = Promise<any>> {
+  (config: configIn): T
   setBeforeRequest: (cb: beforeRequestIn) => any
   setAfterResponsse: (suc: afterResponse[0], err: afterResponse[1]) => any
 }
+
+// 创建请求方法
 export default function createFetchH(config: configIn = {}): requestIn {
   const fetchH = new FetchH(config)
   const request: any = fetchH.request.bind(fetchH)

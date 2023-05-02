@@ -64,8 +64,10 @@ export interface drawInfoInter {
 // 通知得分消息
 interface scoreInfoInter {
   type: 'score',
-  uid: string,
-  addScore: number
+  data: {
+    uid: string,
+    addScore: number
+  }
 }
 
 // 回合类
@@ -124,7 +126,6 @@ export class Room {
       // 第一个进入的是房主
       this.roomOwnerId = palyer.uid
       this.roomOwnerName = palyer.name
-      return
     }
 
     // 加入成功！
@@ -132,10 +133,13 @@ export class Room {
       code: 1,
       msg: "加入成功！",
       data: {
-        roomStatus: this.status,
-        roomOwnerId: this.roomOwnerId,
-        roomOwnerName: this.roomOwnerName,
-        uid: palyer.uid
+        type: "myJoin",
+        data: {
+          roomStatus: this.status,
+          roomOwnerId: this.roomOwnerId,
+          roomOwnerName: this.roomOwnerName,
+          uid: palyer.uid
+        }
       }
     })
 
@@ -150,15 +154,18 @@ export class Room {
   noticeJoin() {
     let palyers = this.palyers
     let data = JSON.stringify({
-      type: "join",
+      code: 1,
       msg: "新成员加入！",
-      data: palyers.map(v => {
-        return {
-          uid: v.uid,
-          name: v.name,
-          score: v.score
-        }
-      })
+      data: {
+        type: "join",
+        data: palyers.map(v => {
+          return {
+            uid: v.uid,
+            name: v.name,
+            score: v.score
+          }
+        })
+      }
     })
 
     palyers.forEach(v => {
@@ -185,9 +192,10 @@ export class Room {
     } else {
       // 还没开始
       data = JSON.stringify({
-        type: 'status',
+        code: 1,
         msg: "房间状态变化",
         data: {
+          type: 'status',
           status: newStatus
         }
       })
@@ -250,8 +258,8 @@ export class Room {
   }
 
   // 接收作画，发送作画
-  noticeDraw(info: drawInfoInter) {
-    this.drawInfoList.push(info)
+  noticeDraw(infos: drawInfoInter[]) {
+    this.drawInfoList.push(...infos)
     flushDrawInfoList(this.palyers, this.drawInfoList, this.drawerIndex)
   }
 
@@ -269,13 +277,15 @@ export class Room {
 
     let scoreInfo: scoreInfoInter = {
       type: "score",
-      uid: palyer.uid,
-      addScore: addScore
+      data: {
+        uid: palyer.uid,
+        addScore: addScore
+      }
     }
 
     palyer.connect.send({
       code: 1,
-      msg: "绘画者得分",
+      msg: "得分更新",
       data: scoreInfo
     })
 
@@ -381,21 +391,29 @@ function flushChatList(palyers: palyerInter[], chatList: chatOutInter[], righter
     let lastChat = chatList[chatList.length - 1]
     lastChat.msg = `答案:'${lastChat.msg}'正确！你是第一位答对的！+${addScore}`
     let toWiner = JSON.stringify({
-      type: 'chat',
+      code: 1,
       msg: "聊天更新",
-      data: list
+      data: {
+        type: 'chat',
+        data: list
+      }
     })
     lastChat.msg = `玩家${lastChat.name}回答正确!是第一位答对的玩家`
     let toOther = JSON.stringify({
-      type: 'chat',
+      code: 1,
       msg: "聊天更新",
-      data: list
+      data: {
+        type: 'chat',
+        data: list
+      }
     })
 
     const scoreInfo: scoreInfoInter = {
       type: 'score',
-      uid: righterId,
-      addScore: addScore!
+      data: {
+        uid: righterId,
+        addScore: addScore!
+      }
     }
     const scoreInfoStr = JSON.stringify({
       code: 1,
@@ -415,9 +433,12 @@ function flushChatList(palyers: palyerInter[], chatList: chatOutInter[], righter
   } else {
     // 正常
     let data = JSON.stringify({
-      type: 'chat',
+      code: 1,
       msg: "聊天更新",
-      data: list
+      data: {
+        type: 'chat',
+        data: list
+      }
     })
 
     palyers.forEach(v => {
@@ -430,7 +451,10 @@ let flushDrawInfoList = throttle(100, function (palyers: palyerInter[], infoLsit
   let data = JSON.stringify({
     code: 1,
     msg: "绘画更新",
-    data: infoLsit.splice(0)
+    data: {
+      type: "draw",
+      drawInfos: infoLsit.splice(0)
+    }
   })
 
   palyers.forEach((v, i) => {

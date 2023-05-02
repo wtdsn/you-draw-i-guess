@@ -1,12 +1,37 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
+import { useRouter } from 'vue-router';
 import PenPath from './PenPath.vue';
 
 // api
-import { createRoom } from '@/api/entry';
+import { createRoom, joinByNumber as joinByNumberApi } from '@/api/entry';
 
 const name = ref('123')
+const router = useRouter()
 
+// 创建房间
+
+async function create() {
+  if (!name.value || !name.value.trim()) {
+    alert("请输入昵称")
+    return
+  }
+  const res = await createRoom(name.value)
+  if (res.code === 0) {
+    alert(res.msg)
+    return
+  } else {
+    router.push({
+      name: "index",
+      query: {
+        roomNumber: res.data,
+        name: name.value
+      }
+    })
+  }
+}
+
+// 房间号输入
 const beforeJoin = ref(false)
 function toJoin() {
   beforeJoin.value = true;
@@ -20,24 +45,31 @@ function cancleJoin() {
 }
 
 const roomNumber = ref()
-function join() {
-  console.log(roomNumber.value)
-}
-
 function limitNumber() {
   roomNumber.value = roomNumber.value.replace(/[^0-9]/, '')
 }
 
-
-// 创建房间
-async function create() {
-  if (!name.value || !name.value.trim()) {
-    alert("请输入昵称")
-    return
+// 加入房间
+async function join() {
+  if (!name.value || !roomNumber.value) {
+    alert('昵称和房间号不能未空')
   }
-  const res = await createRoom(name.value)
-  console.log("res", res);
+
+  const res = await joinByNumberApi(name.value, roomNumber.value)
+  if (!res.code) {
+    alert(res.msg)
+    return
+  } else
+    router.push({
+      name: "index",
+      query: {
+        roomNumber: roomNumber.value,
+        name: name.value
+      }
+    })
 }
+
+
 
 // todo 邀请用户
 </script>

@@ -84,3 +84,25 @@ declare module 'axios' {
 ts 和 vscode 识别成功了。不过 ts-nde 好像报错了！
 
 不知道怎么办了，只好直接修改原本的声明文件了！
+
+
+# vite 项目中路径别名的问题
+如果是 vite + js 的项目。在 viteconfig.js 中配置
+```js
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, './src')
+    }
+  },
+```
+就行了
+
+如果是 ts 还需要再 tsconfig.json 中配置
+```json
+    "baseUrl": "./",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+```

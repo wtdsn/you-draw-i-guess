@@ -2,11 +2,21 @@
 import { onMounted, ref, onBeforeUnmount } from 'vue';
 import { throttle, debounce } from 'utils-h'
 
+export interface drawInfoInter {
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string
+}
+
 interface propT {
   color: string,
   tool: 'pen' | 'erase',
-  status: 'draw' | "show"
+  status: 'draw' | "show",
+  sendDrawInfo: (drawInfo: drawInfoInter) => void
 }
+
 const props = defineProps<propT>()
 
 onMounted(() => {
@@ -76,9 +86,17 @@ let mousemove = throttle(20, (e: MouseEvent) => {
   pageX -= ox.value
   pageY -= oy.value
 
-  let path = new Path(...prePosi.value!, pageX, pageY, props.tool, props.color)
+  draw(...prePosi.value!, pageX, pageY, props.tool, props.color)
+
+  props.sendDrawInfo({
+    x1: prePosi.value![0],
+    y1: prePosi.value![1],
+    x2: pageX,
+    y2: pageY,
+    color: (props.tool === 'erase') ? '#fff' : props.color
+  })
+
   prePosi.value = [pageX, pageY]
-  path.draw()
 }) as (e: MouseEvent) => void
 
 function start(e: MouseEvent) {
@@ -88,6 +106,12 @@ function start(e: MouseEvent) {
   pageX -= ox.value
   pageY -= oy.value
   prePosi.value = [pageX, pageY]
+}
+
+// 绘画
+function draw(x1: number, y1: number, x2: number, y2: number, tool: "pen" | "erase", color: string) {
+  let path = new Path(x1, y1, x2, y2, tool, color)
+  path.draw()
 }
 
 function leave() {
@@ -100,7 +124,8 @@ function clear() {
 }
 
 defineExpose({
-  clear
+  clear,
+  draw
 })
 </script>
 
