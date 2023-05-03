@@ -71,11 +71,11 @@ function chooseKeyWord(word: string) {
       </div>
       <!-- 你的选择是：请作画 （90s 内作画）-->
       <div class="choose_text" v-else-if="status === statusE.drawing">
-        {{ keyWord }}
+        {{ keyWord || keyWordList[0] }}
       </div>
       <!-- 、回合结束 -->
       <div class="text" v-else-if="status === statusE.roundEnd">
-        此回合结束！共3人答对！
+        此回合结束！
       </div>
     </div>
 
@@ -89,7 +89,7 @@ function chooseKeyWord(word: string) {
       </div>
       <!-- 该玩家跳过此回合，进入下一个回合中 -->
       <div class="text" v-else-if="status === statusE.roundEnd">
-        此回合结束！共3人答对！
+        此回合结束！
       </div>
     </div>
 

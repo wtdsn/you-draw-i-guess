@@ -127,6 +127,13 @@ function initRoomInfo(data: myJoinResIn) {
 }
 
 function updateRoomStatus(data: any) {
+  // 原本是 end ，重新开始
+  if (status.value === statusE.end) {
+    palyers.value.forEach(v => {
+      v.score = 0
+    })
+  }
+
   status.value = data.status
   ownerId.value = data.roomOwnerId
   if (data.status < 2) {
@@ -247,9 +254,6 @@ const time = ref<number>(0)
 const keyWord = ref<string>('')
 const keyWordList = ref<string[]>([])
 function startGame() {
-  palyers.value.forEach(v => {
-    v.score = 0
-  })
   sendWs({
     type: 'start'
   })
@@ -261,7 +265,6 @@ function chooseKeyWord(word: string) {
     type: "choose",
     data: word
   })
-  keyWordList.value = []
 }
 
 interface showKeyWordResIn {
