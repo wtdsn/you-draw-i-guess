@@ -7,6 +7,7 @@ export interface drawInfoInter {
   y1: number,
   x2: number,
   y2: number,
+  tool: 'pen' | 'erase' | 'clear'
   color: string
 }
 
@@ -86,15 +87,17 @@ let mousemove = throttle(20, (e: MouseEvent) => {
   pageX -= ox.value
   pageY -= oy.value
 
-  draw(...prePosi.value!, pageX, pageY, props.tool, props.color)
-
-  props.sendDrawInfo({
+  let data = {
     x1: prePosi.value![0],
     y1: prePosi.value![1],
     x2: pageX,
     y2: pageY,
-    color: (props.tool === 'erase') ? '#fff' : props.color
-  })
+    tool: props.tool,
+    color: props.color
+  }
+  draw(data)
+
+  props.sendDrawInfo(data)
 
   prePosi.value = [pageX, pageY]
 }) as (e: MouseEvent) => void
@@ -109,9 +112,12 @@ function start(e: MouseEvent) {
 }
 
 // 绘画
-function draw(x1: number, y1: number, x2: number, y2: number, tool: "pen" | "erase", color: string) {
-  let path = new Path(x1, y1, x2, y2, tool, color)
-  path.draw()
+function draw(data: drawInfoInter) {
+  if (data.tool === 'clear') {
+    clear()
+  } else {
+    new Path(data.x1, data.y1, data.x2, data.y2, data.tool, data.color).draw()
+  }
 }
 
 function leave() {
@@ -121,6 +127,7 @@ function leave() {
 // 暴露 clear 方法
 function clear() {
   ctx.value!.clearRect(0, 0, cw.value, ch.value)
+
 }
 
 defineExpose({

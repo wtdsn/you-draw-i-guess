@@ -4,13 +4,15 @@
 import join from './join'
 import chat from './chat'
 import draw from './draw'
+import leave from './leave'
 import startGame from './startGame'
 
 // 声明
 import { Connect } from '@src/utils/socket-h'
+import { chooseKeyWord } from './choose'
 
 interface bodyInter {
-  type: "join" | "chat" | "draw" | 'start',
+  type: "join" | "chat" | "draw" | 'start' | 'choose',
   data?: any
 }
 
@@ -23,6 +25,8 @@ export function game(msg: string, connect: Connect) {
         return chat(body.data, connect)
       case 'draw':
         return draw(body.data, connect)
+      case 'choose':
+        return chooseKeyWord(body.data, connect)
       case 'join':
         return join(body.data, connect)
       case 'start':
@@ -35,5 +39,11 @@ export function game(msg: string, connect: Connect) {
       code: 0,
       msg: err.message || "参数错误"
     })
+  }
+}
+
+export function leaveRoom(connect: Connect) {
+  if (connect?.store?.roomNumber) {
+    leave(connect.store.roomNumber, connect.store.uid)
   }
 }

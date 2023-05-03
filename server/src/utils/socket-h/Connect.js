@@ -20,6 +20,7 @@ class Connect extends EventEmitter {
 
     socket.on('error', () => {
       console.log("err at socket");
+      this.status = CLOSING
       this.emit('close')
     })
   }

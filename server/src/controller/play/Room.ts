@@ -9,9 +9,8 @@ const words4 = ['蜜雪冰城', '后羿射日', '女娲补天', '嫦娥奔月']
 
 // 等待时间
 const showNewRounTime = 3000
-export const chooseTime = 12000
-const chooseDelay = 2000
-export const drawTime = 90 * 1000
+const chooseTime = 12000
+const drawTime = 90 * 1000
 const roundEndTime = 3000
 const gameEndTime = 3000
 
@@ -58,6 +57,7 @@ export interface drawInfoInter {
   y1: number,
   x2: number,
   y2: number,
+  tool: string
   color: string
 }
 
@@ -94,10 +94,10 @@ class Round {
 
 function _getKeyWords() {
   let wordList = []
-  wordList.push(words1[Math.round(Math.random() * words1.length)])
-  wordList.push(words2[Math.round(Math.random() * words2.length)])
-  wordList.push(words3[Math.round(Math.random() * words3.length)])
-  wordList.push(words4[Math.round(Math.random() * words4.length)])
+  wordList.push(words1[Math.round(Math.random() * (words1.length - 1))])
+  wordList.push(words2[Math.round(Math.random() * (words2.length - 1))])
+  wordList.push(words3[Math.round(Math.random() * (words3.length - 1))])
+  wordList.push(words4[Math.round(Math.random() * (words4.length - 1))])
   return wordList
 }
 
@@ -109,10 +109,10 @@ export class Room {
   public round: Round | undefined
   public drawerIndex = 0
   public roomOwnerId: string | undefined
-  public roomOwnerName: string | undefined
   public chatList: chatOutInter[] = []
   public drawInfoList: drawInfoInter[] = []
   public drawTimer: any
+  public waitTime: number = 0
 
   constructor(public roomNumber: string) {
     this.status = statusE.waitingJoin
@@ -122,11 +122,11 @@ export class Room {
   joinRoom(palyer: palyerInter) {
     this.palyers.push(palyer)
 
-    if (this.palyers.length === 0) {
+    if (this.palyers.length === 1) {
       // 第一个进入的是房主
       this.roomOwnerId = palyer.uid
-      this.roomOwnerName = palyer.name
     }
+
 
     // 加入成功！
     palyer.connect.send({
@@ -135,27 +135,51 @@ export class Room {
       data: {
         type: "myJoin",
         data: {
-          roomStatus: this.status,
+          status: this.status,
           roomOwnerId: this.roomOwnerId,
-          roomOwnerName: this.roomOwnerName,
-          uid: palyer.uid
+          myId: palyer.uid
         }
       }
     })
 
     // 通知人员更新
-    this.noticeJoin()
+    this.noticeUpdatePlayers()
 
     // 进入等待开始状态
     if (this.palyers.length > 1) this.noticeStatusChange(statusE.waitingStart)
   }
 
+  // 有人退出
+  leaveRoom(uid: string) {
+    console.log("leaveRoom", uid)
+    if (this.status < 2) {
+      // 未开始
+      this.palyers = this.palyers.filter(v => {
+        if (v.uid === uid) return false
+        return true
+      })
+
+      this.noticeUpdatePlayers()
+
+      if (this.palyers.length < 2) {
+        this.noticeStatusChange(statusE.waitingJoin)
+      }
+    } else {
+      // 退出的是绘画的
+      // 退出的不是绘画的
+      // 退出的在绘画的前面  index减一
+      // 退出的在绘画人的后面 index 不变
+      // 退出的是房主
+      // 搞不动，再说
+    }
+  }
+
   // 通知有人加入
-  noticeJoin() {
+  noticeUpdatePlayers() {
     let palyers = this.palyers
     let data = JSON.stringify({
       code: 1,
-      msg: "新成员加入！",
+      msg: "成员更新",
       data: {
         type: "join",
         data: palyers.map(v => {
@@ -180,13 +204,16 @@ export class Room {
     if (newStatus > 1) {
       // 开始后
       data = JSON.stringify({
-        type: 'status',
+        code: 1,
         msg: "房间状态变化",
         data: {
-          status: newStatus,
-          roomOwnerId: this.roomOwnerId,
-          roomOwnerName: this.roomOwnerName,
-          drawerId: this.palyers[this.drawerIndex].uid
+          type: 'status',
+          data: {
+            status: newStatus,
+            roomOwnerId: this.roomOwnerId,
+            drawerId: this.palyers[this.drawerIndex].uid,
+            waitTime: this.waitTime
+          }
         }
       })
     } else {
@@ -196,7 +223,10 @@ export class Room {
         msg: "房间状态变化",
         data: {
           type: 'status',
-          status: newStatus
+          data: {
+            status: newStatus,
+            roomOwnerId: this.roomOwnerId
+          }
         }
       })
     }
@@ -217,7 +247,7 @@ export class Room {
       })
     }
 
-    if (this.status === statusE.waitingStart) {
+    if (this.status === statusE.waitingStart || this.status === statusE.end) {
       this.newRound()
       return true
     }
@@ -231,6 +261,7 @@ export class Room {
     this.noticeStatusChange(statusE.newRound)
     this.round = undefined
     // 3000 显示新回合开始
+    this.waitTime = showNewRounTime
     setTimeout(() => {
       this.noticeChoose()
     }, showNewRounTime)
@@ -240,17 +271,32 @@ export class Room {
   noticeChoose() {
     this.noticeStatusChange(statusE.choosing)
     this.round = new Round(this.palyers[this.drawerIndex].uid)
+
+    // 发送词语
+    this.palyers[this.drawerIndex].connect.send({
+      code: 1,
+      msg: "绘画词",
+      data: {
+        type: "choosing",
+        data: {
+          list: this.round!.getWordsList()
+        }
+      }
+    })
+
+    this.waitTime = chooseTime
     this.round.chooseTimer = setTimeout(() => {
       // 如果此时间内没有选择，默认选择第一个
       // todo 考虑其他异常情况呢？比如用户退出，本回合异常结束，进入下一个回合？
       this.setKeyWord(this.round?.wordsList[0]! || '花')
-    }, chooseTime + chooseDelay)  // 2s 的延迟
+    }, chooseTime)
   }
 
   // 选择完
   setKeyWord(word: string) {
     this.round!.setKeyWord(word)
     // 开始作画
+    this.waitTime = drawTime
     this.noticeStatusChange(statusE.drawing)
     this.drawTimer = setTimeout(() => {
       this.endRound()
@@ -264,15 +310,17 @@ export class Room {
   }
 
 
+  // 回合结束
   endRound() {
     // 如果先全部答对
     clearTimeout(this.drawTimer)
+    this.waitTime = roundEndTime
     this.noticeStatusChange(statusE.roundEnd)
-    this.drawerIndex++
+
 
     // 计算绘画者得分
     let addScore = computedDrawerScore(this.round!.rightNum)
-    let palyer = this.palyers[this.drawerIndex]
+    let palyer = this.palyers[this.drawerIndex++]
     palyer.score += addScore
 
     let scoreInfo: scoreInfoInter = {
@@ -283,10 +331,15 @@ export class Room {
       }
     }
 
-    palyer.connect.send({
+    // 通知得分
+    const scoreInfoStr = JSON.stringify({
       code: 1,
       msg: "得分更新",
       data: scoreInfo
+    })
+
+    this.palyers.forEach(v => {
+      v.connect.send(scoreInfoStr)
     })
 
     // 结算一波
@@ -303,11 +356,14 @@ export class Room {
   }
 
   endGame() {
-    this.noticeStatusChange(statusE.end)
+    this.waitTime = 0
+    this.drawerIndex = 0
     // 显示游戏结果
-    setTimeout(() => {
-      this.noticeStatusChange(statusE.waitingJoin)
-    }, gameEndTime)
+    this.noticeStatusChange(statusE.end)
+
+    // setTimeout(() => {
+    // this.noticeStatusChange(statusE.waitingJoin)
+    // }, gameEndTime)
   }
 
   // 聊天
@@ -360,9 +416,8 @@ export class Room {
         // 特殊处理
         flushChatList(this.palyers, this.chatList, data.uid, addScore)
 
-
-        if (this.round.rightNum === this.palyers.length) {
-          // 全部答对
+        // 全部答对
+        if (this.round.rightNum === this.palyers.length - 1) {
           this.endRound()
         }
         return
@@ -383,12 +438,13 @@ export class Room {
 
 let noticeChat = throttle(300, flushChatList, true)
 
+// 发送聊天内容
 function flushChatList(palyers: palyerInter[], chatList: chatOutInter[], righterId?: string, addScore?: number) {
   let list = chatList.splice(0)
 
   if (righterId) {
     // 答对玩家
-    let lastChat = chatList[chatList.length - 1]
+    let lastChat = list[list.length - 1]
     lastChat.msg = `答案:'${lastChat.msg}'正确！你是第一位答对的！+${addScore}`
     let toWiner = JSON.stringify({
       code: 1,
@@ -447,13 +503,14 @@ function flushChatList(palyers: palyerInter[], chatList: chatOutInter[], righter
   }
 }
 
+// 发送绘画内容
 let flushDrawInfoList = throttle(100, function (palyers: palyerInter[], infoLsit: drawInfoInter[], drawerIndex: number) {
   let data = JSON.stringify({
     code: 1,
     msg: "绘画更新",
     data: {
       type: "draw",
-      drawInfos: infoLsit.splice(0)
+      data: infoLsit.splice(0)
     }
   })
 

@@ -43,7 +43,7 @@ export default function join(body: bodyInter, connect: Connect
       connect.close(0, '昵称重复')
     } else {
       // 加入
-
+      console.log("set store")
       let uid = createUni('u')
       connect.store = {
         roomNumber,

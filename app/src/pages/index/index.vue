@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeMount } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getAvatarUrl } from '@/utils/index'
 import { statusE } from '../../../../share/game';
@@ -9,7 +9,8 @@ import { drawInfoInter } from './DrawBoard.vue';
 import DrawBoard from './DrawBoard.vue';
 import DrawTools from './DrawTools.vue';
 import Dialog from './Dialog.vue'
-import { throttle } from 'utils-h';
+import Progress from './Progress.vue'
+import { throttle, debounce } from 'utils-h';
 
 const router = useRouter()
 
@@ -52,19 +53,20 @@ const palyers = ref<playerInter[]>([])
 
 // 更新队列
 function updatePlayers(player: any) {
-  console.log("player", player);
-  player.forEach((v: any) => {
-    let p = {
+  palyers.value = player.map((v: any, i: number) => {
+    return {
       ...v,
       // 路径相对 utils 文件 ,注意打包后的路径
-      avatar: getAvatarUrl('../assets/img/avatar/', `a${palyers.value.length + 1}.png`)
+      avatar: getAvatarUrl('../assets/img/avatar/', `a${i + 1}.png`)
     } as playerInter
-    palyers.value.push(p)
   })
 }
+
 // 更新排名
-function sortPlayers(uid: string, addScore: number) {
+function sortPlayers(data: any) {
+  const { uid, addScore } = data
   let index: number = 0
+
   palyers.value.some((v, i) => {
     if (v.uid === uid) {
       v.score += addScore
@@ -110,6 +112,33 @@ const drawerName = computed(() => {
 })
 
 
+// 初始化房间参数
+interface myJoinResIn {
+  status: statusE,
+  roomOwnerId: string,
+  myId: string
+}
+
+function initRoomInfo(data: myJoinResIn) {
+  console.log("加入成功！", data);
+  myId.value = data.myId
+  ownerId.value = data.roomOwnerId
+  status.value = data.status
+}
+
+function updateRoomStatus(data: any) {
+  status.value = data.status
+  ownerId.value = data.roomOwnerId
+  if (data.status < 2) {
+    drawerId.value = ''
+    time.value = 0
+    return
+  }
+  drawingBoard?.value?.clear()
+  time.value = data.waitTime
+  drawerId.value = data.drawerId
+}
+
 /* 
    加入房间
 */
@@ -136,8 +165,9 @@ interface chatInfoIn {
 const chatList = ref<chatInfoIn[]>([])
 
 // 更新聊天
-function updateChatList(chatInfo: chatInfoIn) {
-  chatList.value.push(chatInfo)
+function updateChatList(chatInfos: chatInfoIn[]) {
+  chatList.value.push(...chatInfos)
+  scroll()
 }
 
 const chatValue = ref('')
@@ -173,8 +203,15 @@ function handleClickTool(type: "tool" | 'clear' | 'color', val?: string) {
   } else if (type === 'tool') {
     tool.value = val as typeof tool.value
   } else {
-    // clearf
     drawingBoard.value!.clear()
+    sendDrawInfo({
+      x1: 0,
+      x2: 0,
+      y1: 0,
+      y2: 0,
+      color: '',
+      tool: "clear"
+    })
   }
 }
 
@@ -189,7 +226,6 @@ function sendDrawInfo(drawInfo: drawInfoInter) {
 }
 
 let _sendDrawInfo = throttle(100, () => {
-  console.log(drawInfoList.value);
   sendWs({
     type: 'draw',
     data: drawInfoList.value.splice(0)
@@ -199,8 +235,42 @@ let _sendDrawInfo = throttle(100, () => {
 
 function getDrawInfo(drawInfos: drawInfoInter[]) {
   drawInfos.forEach(v => {
-    drawingBoard!.value!.draw(v.x1, v.y1, v.x2, v.y2, 'pen', v.color)
+    drawingBoard!.value!.draw(v)
   })
+}
+
+
+/* 
+     Dialog 操作
+*/
+const time = ref<number>(0)
+const keyWord = ref<string>('')
+const keyWordList = ref<string[]>([])
+function startGame() {
+  palyers.value.forEach(v => {
+    v.score = 0
+  })
+  sendWs({
+    type: 'start'
+  })
+}
+
+function chooseKeyWord(word: string) {
+  keyWord.value = word
+  sendWs({
+    type: "choose",
+    data: word
+  })
+  keyWordList.value = []
+}
+
+interface showKeyWordResIn {
+  time: number,
+  list: string[]
+}
+function showKeyWordList(data: showKeyWordResIn) {
+  keyWord.value = ''
+  keyWordList.value = data.list
 }
 
 /* 
@@ -210,7 +280,7 @@ interface msgIn<T = any> {
   code: 0 | 1,
   msg: string,
   data: {
-    type: 'join' | 'myJoin' | 'chat' | 'draw',
+    type: 'join' | 'myJoin' | 'chat' | 'draw' | 'status' | 'choosing' | "score",
     data: T
   }
 }
@@ -224,9 +294,31 @@ onMounted(() => {
 
   ws.addEventListener('message', (v) => {
     let { code, data } = JSON.parse(v.data) as msgIn
+    if (!code) return
+
+    console.log("msgin", data);
+
     switch (data.type) {
+      case 'chat':
+        updateChatList(data.data)
+        break
+      case 'draw':
+        getDrawInfo(data.data)
+        break
+      case 'status':
+        updateRoomStatus(data.data)
+        break
+      case 'choosing':
+        showKeyWordList(data.data)
+        break
+      case 'score':
+        sortPlayers(data.data)
+        break
       case 'join':
         updatePlayers(data.data)
+        break
+      case 'myJoin':
+        initRoomInfo(data.data)
         break
     }
   })
@@ -240,10 +332,19 @@ function sendWs(data: any) {
   ws.send(JSON.stringify(data))
 }
 
-onBeforeMount(() => {
+onUnmounted(() => {
   ws && ws.close()
 })
 
+// 滚动
+let scroll = debounce(100, () => {
+  const scrollEl = document.querySelector('#chatScroll') as HTMLElement
+  scrollEl.scrollTo({
+    top: scrollEl.scrollHeight - scrollEl.clientHeight,
+    left: 0,
+    behavior: 'smooth'
+  })
+}, false)
 
 </script>
 
@@ -292,51 +393,32 @@ onBeforeMount(() => {
       <div class="right_part">
         <!-- 画板 -->
         <div class="drawing_board_con">
+          <!--  -->
           <div class="board">
             <DrawBoard :color="color" :tool="tool" ref="drawingBoard" :status="drawerId === myId ? 'draw' : 'show'"
               :sendDrawInfo="sendDrawInfo" />
-            <Dialog :status="status" :drawer-id="drawerId" :my-id="myId" :owner-id="ownerId" :drawer-name="drawerName" />
+            <Dialog @start-game="startGame" @choose-key-word="chooseKeyWord" :status="status" :drawer-id="drawerId"
+              :my-id="myId" :owner-id="ownerId" :drawer-name="drawerName" :key-word-list="keyWordList"
+              :key-word="keyWord" />
           </div>
-          <div class="progress">
-            <div class="thumb"></div>
-          </div>
+          <!-- 时间进度 -->
+          <Progress v-if="time" :time="time" class="progress" />
         </div>
         <!-- 聊天区 -->
         <div class="answer_con">
           <DrawTools class="draw_tools_wrapper" @click-tool="handleClickTool" v-if="drawerId && drawerId === myId" />
           <div class="answer_wrapper">
             <div class="chat_list_con">
-              <div class="scroll">
+              <div class="scroll" id="chatScroll">
                 <ul class="chat_list">
-                  <li class="chat_item">
-                    <span class="user">User7899</span>
-                    <span class="text">请问你是</span>
-                  </li>
-
-                  <li class="chat_item">
-                    <span class="right">玩家XXX 答对,+3</span>
-                    <!-- <span class="user">User7899</span> -->
-                    <!-- <span class="text">请问你是</span> -->
-                  </li>
-                  <li class="chat_item">
-                    <span class="user">User7899</span>
-                    <span class="text">请问你是</span>
-                  </li>
-                  <li class="chat_item">
-                    <span class="user">User7899</span>
-                    <span class="text">请问你是</span>
-                  </li>
-                  <li class="chat_item">
-                    <span class="user">User7899</span>
-                    <span class="text">请问你是</span>
-                  </li>
-                  <li class="chat_item">
-                    <span class="user">User7899</span>
-                    <span class="text">请问你是</span>
-                  </li>
-                  <li class="chat_item">
-                    <span class="user">User7899</span>
-                    <span class="text">请问你是</span>
+                  <li class="chat_item" v-for="(v) in chatList">
+                    <template v-if="v.type === 'chat'">
+                      <span class="user">{{ v.name }}</span>
+                      <span class="text">{{ v.msg }}</span>
+                    </template>
+                    <template v-else>
+                      <span class="right">{{ v.msg }}</span>
+                    </template>
                   </li>
                 </ul>
               </div>
@@ -508,16 +590,6 @@ onBeforeMount(() => {
         .progress {
           margin-top: 8px;
           height: 8px;
-          border: 2px solid #052f6e;
-          background-color: #052f6e;
-          border-radius: 10px;
-
-          .thumb {
-            height: 100%;
-            border-radius: 10px;
-            background-color: #f8c135;
-            width: 200px;
-          }
         }
       }
 

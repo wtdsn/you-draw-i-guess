@@ -14,6 +14,7 @@ export default function startGame(connect: Connect
     } else
       if (!room.startGame()) {
         throw Error('无法开始')
-      }
+      } else
+        room.startGame()
   }
 }
